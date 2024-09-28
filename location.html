@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Station Finder</title>
+    <style>
+        #map {
+            height: 80vh;
+            width: 100%;
+        }
+        #form-container {
+            margin: 20px;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=places" async defer></script>
+    <script>
+        let map;
+        let service;
+        let infowindow;
+
+        function initMap() {
+            const initialLocation = new google.maps.LatLng(37.7749, -122.4194); // Default to San Francisco
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: initialLocation,
+                zoom: 12,
+            });
+
+            infowindow = new google.maps.InfoWindow();
+
+            const locationButton = document.createElement("button");
+            locationButton.textContent = "Find EV Charging Stations";
+            locationButton.classList.add("custom-map-control-button");
+            map.controls[google.maps.ControlPosition.TOP_CENTER].push(locationButton);
+            locationButton.addEventListener("click", () => {
+                const input = document.getElementById('location').value;
+                findChargingStations(input);
+            });
+        }
+
+        function findChargingStations(location) {
+            const request = {
+                query: location,
+                fields: ['name', 'geometry'],
+            };
+
+            service = new google.maps.places.PlacesService(map);
+            service.findPlaceFromQuery(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    map.setCenter(results[0].geometry.location);
+                    const search = {
+                        location: results[0].geometry.location,
+                        radius: '5000',
+                        type: ['charging_station'],
+                    };
+
+                    service.nearbySearch(search, (results, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK) {
+                            for (let i = 0; i < results.length; i++) {
+                                createMarker(results[i]);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function createMarker(place) {
+            const marker = new google.maps.Marker({
+                map: map,
+                position: place.geometry.location,
+            });
+
+            google.maps.event.addListener(marker, 'click', () => {
+                infowindow.setContent(place.name);
+                infowindow.open(map, marker);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div id="form-container">
+        <input id="location" type="text" placeholder="Enter a location">
+        <button onclick="findChargingStations(document.getElementById('location').value)">Search</button>
+    </div>
+    <div id="map"></div>
+</body>
+</html>
